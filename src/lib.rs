@@ -86,6 +86,14 @@ impl<T, E> TracedResult<T, E> {
             TracedResult::Err(err) => Err(err),
         }
     }
+
+    #[inline(always)]
+    pub fn discard_call_stack(self) -> std::result::Result<T, E> {
+        match self {
+            TracedResult::Ok(ok) => Ok(ok),
+            TracedResult::Err(err) => Err(err.into_inner()),
+        }
+    }
 }
 
 impl<T, E> TracedResult<T, E> {
