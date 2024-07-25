@@ -57,6 +57,18 @@ impl<T, E> TracedResult<T, E> {
     }
 }
 
+impl<T, E> TracedResult<T, E> {
+    #[inline(always)]
+    pub fn is_ok(&self) -> bool {
+        matches!(self, Self::Ok(_))
+    }
+
+    #[inline(always)]
+    pub fn is_err(&self) -> bool {
+        matches!(self, Self::Err(_))
+    }
+}
+
 // Standard `Result` methods.
 // Internally, all these use the actual std::result::Result methods. Conversion overhead for this should be basically zero since it's done using an inlined function with a single match expression.
 // The upside of this is that the panicking behavior of these methods will stay consistent with their `std` counterparts
