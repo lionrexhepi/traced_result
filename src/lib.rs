@@ -80,7 +80,7 @@ impl<T, E> TracedResult<T, E> {
     /// Convert this `TracedResult<T, E>` into a `std::result::Result<T, TracedError<E>>`.
     /// This is useful when working with functions that do not support `TracedResult`, but causes the error's (if any) call stack to freeze, and subsequent uses of the `?` operator will no longer be tracked.
     #[inline(always)]
-    pub fn stop_trace(self) -> std::result::Result<T, TracedError<E>> {
+    pub fn into_result(self) -> std::result::Result<T, TracedError<E>> {
         match self {
             TracedResult::Ok(ok) => Ok(ok),
             TracedResult::Err(err) => Err(err),
@@ -109,7 +109,7 @@ impl<T: Debug, E: Debug> TracedResult<T, E> {
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap()`
     #[inline(always)]
     pub fn unwrap(self) -> T {
-        self.stop_trace().unwrap()
+        self.into_result().unwrap()
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_or_default()`
@@ -118,43 +118,43 @@ impl<T: Debug, E: Debug> TracedResult<T, E> {
     where
         T: Default,
     {
-        self.stop_trace().unwrap_or_default()
+        self.into_result().unwrap_or_default()
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_or()`
     #[inline(always)]
     pub fn unwrap_or(self, default: T) -> T {
-        self.stop_trace().unwrap_or(default)
+        self.into_result().unwrap_or(default)
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::else()`
     #[inline(always)]
     pub fn unwrap_or_else(self, op: impl FnOnce(TracedError<E>) -> T) -> T {
-        self.stop_trace().unwrap_or_else(op)
+        self.into_result().unwrap_or_else(op)
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_err()`
     #[inline(always)]
     pub fn unwrap_err(self) -> TracedError<E> {
-        self.stop_trace().unwrap_err()
+        self.into_result().unwrap_err()
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::expect()`
     #[inline(always)]
     pub fn expect(self, msg: &'static str) -> T {
-        self.stop_trace().expect(msg)
+        self.into_result().expect(msg)
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_unchecked()`
     #[inline(always)]
     pub unsafe fn unwrap_unchecked(self) -> T {
-        self.stop_trace().unwrap_unchecked()
+        self.into_result().unwrap_unchecked()
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_err_unchecked()`
     #[inline(always)]
     pub unsafe fn unwrap_err_unchecked(self) -> TracedError<E> {
-        self.stop_trace().unwrap_err_unchecked()
+        self.into_result().unwrap_err_unchecked()
     }
 }
 
@@ -204,7 +204,7 @@ impl<T, E> From<Result<T, E>> for TracedResult<T, E> {
 
 impl<T, E> From<TracedResult<T, E>> for Result<T, TracedError<E>> {
     fn from(value: TracedResult<T, E>) -> Self {
-        value.stop_trace()
+        value.into_result()
     }
 }
 
