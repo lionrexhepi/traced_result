@@ -37,6 +37,13 @@ impl<E> TracedError<E> {
     }
 }
 
+impl<E> From<E> for TracedError<E> {
+    #[track_caller]
+    fn from(value: E) -> Self {
+        Self::new(value)
+    }
+}
+
 /// A `Result` that traces the call stack of `Err` values.
 /// Every time an `Err` value is propagated using the `?` operator, `TracedResult`s custom `Try` implementation will automatically append the location of the `?` operator to the `TracedError`s call stack.
 /// Note that both `TracedError::new()` and `TracedResult::try()` use the `#[track_caller]` attribute to get their caller's location. This won't affect most users of this crate; However, if you use #[track_caller] on your own methods, you should be aware that the locations tracked by `trace_error` may be further up the stack than their "actual" locations. See [the Rust reference](https://doc.rust-lang.org/std/panic/struct.Location.html#method.caller) for more info.
@@ -58,11 +65,13 @@ impl<T, E> TracedResult<T, E> {
 }
 
 impl<T, E> TracedResult<T, E> {
+    /// Returns `true` if this value is an `Ok()` value
     #[inline(always)]
     pub fn is_ok(&self) -> bool {
         matches!(self, Self::Ok(_))
     }
 
+    /// Returns `true` if this value is an `Err()` value
     #[inline(always)]
     pub fn is_err(&self) -> bool {
         matches!(self, Self::Err(_))
@@ -159,12 +168,28 @@ impl<T, R, E: From<R>> FromResidual<TracedResult<Infallible, R>> for TracedResul
     }
 }
 
+impl<T, E> From<Result<T, E>> for TracedResult<T, E> {
+    #[track_caller]
+    fn from(value: Result<T, E>) -> Self {
+        match value {
+            Ok(ok) => Self::Ok(ok),
+            Err(err) => Self::Err(err.into()),
+        }
+    }
+}
+
+impl<T, E> From<TracedResult<T, E>> for Result<T, TracedError<E>> {
+    fn from(value: TracedResult<T, E>) -> Self {
+        value.stop_trace()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{TracedError, TracedResult};
 
     fn errors() -> TracedResult<i32, &'static str> {
-        TracedResult::Err(TracedError::new("Bad"))
+        Err("Bad").into()
     }
 
     fn consumes() -> TracedResult<i32, String> {
