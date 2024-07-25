@@ -2,5 +2,8 @@
 name = "trace_error"
 version = "0.1.0"
 edition = "2021"
+description = "Proof-of-concept error tracing using the `Try` trait"
+license = "MIT"
+readme = "./README.md"
 
 [dependencies]
