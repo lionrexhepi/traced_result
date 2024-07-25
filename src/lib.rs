@@ -30,6 +30,10 @@ impl<E> TracedError<E> {
         self.inner
     }
 
+    pub fn trace(&self) -> &Vec<&'static Location<'static>> {
+        &self.trace
+    }
+
     /// Convert the `TracedError` into a tuple of error and call stack.
     #[inline(always)]
     pub fn split(self) -> (E, Vec<&'static Location<'static>>) {
