@@ -48,9 +48,29 @@ impl<E> From<E> for TracedError<E> {
     }
 }
 
+impl<E: std::fmt::Display> std::fmt::Display for TracedError<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)?;
+
+        for location in self.trace.iter().rev() {
+            writeln!(
+                f,
+                "At ({line}:{col}) in {file}",
+                file = location.file(),
+                line = location.line(),
+                col = location.column()
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl<E: std::error::Error> std::error::Error for TracedError<E> {}
+
 /// A `Result` that traces the call stack of `Err` values.
 /// Every time an `Err` value is propagated using the `?` operator, `TracedResult`s custom `Try` implementation will automatically append the location of the `?` operator to the `TracedError`s call stack.
 /// Note that both `TracedError::new()` and `TracedResult::try()` use the `#[track_caller]` attribute to get their caller's location. This won't affect most users of this crate; However, if you use #[track_caller] on your own methods, you should be aware that the locations tracked by `trace_error` may be further up the stack than their "actual" locations. See [the Rust reference](https://doc.rust-lang.org/std/panic/struct.Location.html#method.caller) for more info.
+#[derive(Debug)]
 pub enum TracedResult<T, E> {
     Ok(T),
     Err(TracedError<E>),
