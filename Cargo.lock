@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "trace_error"
+name = "traced_result"
 version = "0.1.0"

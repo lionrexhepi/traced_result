@@ -1,5 +1,5 @@
 [package]
-name = "trace_error"
+name = "traced_result"
 version = "0.1.0"
 edition = "2021"
 description = "Proof-of-concept error tracing using the `Try` trait"

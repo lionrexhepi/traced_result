@@ -1,10 +1,10 @@
-# trace_error
+# traced_result
 ## An proof-of-concept to automatically backtrace errors propagated with the `?` operator#
-**Note**: This crate relies on the unstable [`try_trait_v2`](https://rust-lang.github.io/rfcs/3058-try-trait-v2.html) language feature. This means it can only be used with the `nightly` toolchain, may break at any time, and is thus not recommended for use in production code until this feature is stabilized.
+**Note**: This crate relies on the unstable [`try_trait_v2`](https://rust-lang.github.io/rfcs/3058-try-trait-v2.html) language feature. This means it can only be used with the `nightly` toolchain, may break at any time, and is thus not recommended for use in production code until this feature is stabilized. 
 
 ## Usage 
-
-The two types at the core of this crate are `TraceResult<T, E>`, designed to work like `std::result::Result<T, E>`, and `TracedError<E>`, which is simply a wrapper around `E` and a `Vec<&'static Location<'static>>`. To get started, simply replace `Result` with `TracedResult`:
+`traced_result` differs from crates like [`trace_error`](https://crates.io/crates/trace_error) in that it does not use macros to trace call stacks, but instead uses the (currently unstable) `Try` trait to be as consistent with regular `Result`s as possible.
+The two types at the core of this crate are `TracedResult<T, E>`, designed to work like `std::result::Result<T, E>`, and `TracedError<E>`, which is simply a wrapper around `E` and a `Vec<&'static Location<'static>>`. To get started, simply replace `Result` with `TracedResult`:
 
 ```rust
 // From
