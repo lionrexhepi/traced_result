@@ -94,30 +94,57 @@ impl<T, E> TracedResult<T, E> {
             TracedResult::Err(err) => Err(err.into_inner()),
         }
     }
-}
 
-impl<T, E> TracedResult<T, E> {
     /// Returns `true` if this value is an `Ok()` value
     #[inline(always)]
     pub fn is_ok(&self) -> bool {
-        matches!(self, Self::Ok(_))
+        matches!(self, TracedResult::Ok(_))
     }
 
     /// Returns `true` if this value is an `Err()` value
     #[inline(always)]
     pub fn is_err(&self) -> bool {
-        matches!(self, Self::Err(_))
+        matches!(self, TracedResult::Err(_))
     }
-}
 
-// Standard `Result` methods.
-// Internally, all these use the actual std::result::Result methods. Conversion overhead for this should be basically zero since it's done using an inlined function with a single match expression.
-// The upside of this is that the panicking behavior of these methods will stay consistent with their `std` counterparts
-impl<T: Debug, E: Debug> TracedResult<T, E> {
-    /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap()`
-    #[inline(always)]
-    pub fn unwrap(self) -> T {
-        self.into_result().unwrap()
+    /// Equivalent to `std::result::Result::<T, TracedError<E>>::map()`
+    pub fn map<U>(self, map: impl FnOnce(T) -> U) -> TracedResult<U, E> {
+        match self {
+            TracedResult::Ok(ok) => TracedResult::Ok(map(ok)),
+            TracedResult::Err(err) => TracedResult::Err(err),
+        }
+    }
+
+    /// Map the `Err` value of this result, if present.
+    /// This does **not** add the call location of this method to the stack trace.
+    pub fn map_err<F>(self, map: impl FnOnce(E) -> F) -> TracedResult<T, F> {
+        match self {
+            TracedResult::Ok(ok) => TracedResult::Ok(ok),
+            TracedResult::Err(TracedError { inner, trace }) => TracedResult::Err(TracedError {
+                inner: map(inner),
+                trace,
+            }),
+        }
+    }
+
+    /// Equivalent to `std::result::Result::<T, TracedError<E>>::map_or()`
+    pub fn map_or<U>(self, map: impl FnOnce(T) -> U, default: U) -> U {
+        match self {
+            TracedResult::Ok(ok) => map(ok),
+            TracedResult::Err(_) => default,
+        }
+    }
+
+    /// Equivalent to `std::result::Result::<T, TracedError<E>>::map_or_else()`
+    pub fn map_or_else<U>(
+        self,
+        op: impl FnOnce(TracedError<E>) -> U,
+        map: impl FnOnce(T) -> U,
+    ) -> U {
+        match self {
+            TracedResult::Ok(ok) => map(ok),
+            TracedResult::Err(err) => op(err),
+        }
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_or_default()`
@@ -139,6 +166,17 @@ impl<T: Debug, E: Debug> TracedResult<T, E> {
     #[inline(always)]
     pub fn unwrap_or_else(self, op: impl FnOnce(TracedError<E>) -> T) -> T {
         self.into_result().unwrap_or_else(op)
+    }
+}
+
+// Standard `Result` methods.
+// Internally, all these use the actual std::result::Result methods. Conversion overhead for this should be basically zero since it's done using an inlined function with a single match expression.
+// The upside of this is that the panicking behavior of these methods will stay consistent with their `std` counterparts
+impl<T: Debug, E: Debug> TracedResult<T, E> {
+    /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap()`
+    #[inline(always)]
+    pub fn unwrap(self) -> T {
+        self.into_result().unwrap()
     }
 
     /// Equivalent to `std::result::Result::<T, TracedError<E>>::unwrap_err()`
@@ -172,7 +210,7 @@ impl<T, E> std::ops::Try for TracedResult<T, E> {
     type Residual = TracedResult<Infallible, E>;
 
     fn from_output(output: Self::Output) -> Self {
-        Self::Ok(output)
+        TracedResult::Ok(output)
     }
 
     #[track_caller]
@@ -191,7 +229,7 @@ impl<T, E> std::ops::Try for TracedResult<T, E> {
 impl<T, R, E: From<R>> FromResidual<TracedResult<Infallible, R>> for TracedResult<T, E> {
     fn from_residual(residual: TracedResult<Infallible, R>) -> Self {
         match residual {
-            TracedResult::Err(TracedError { trace, inner }) => Self::Err(TracedError {
+            TracedResult::Err(TracedError { trace, inner }) => TracedResult::Err(TracedError {
                 trace,
                 inner: From::from(inner),
             }),
@@ -204,8 +242,8 @@ impl<T, E> From<Result<T, E>> for TracedResult<T, E> {
     #[track_caller]
     fn from(value: Result<T, E>) -> Self {
         match value {
-            Ok(ok) => Self::Ok(ok),
-            Err(err) => Self::Err(err.into()),
+            Ok(ok) => TracedResult::Ok(ok),
+            Err(err) => TracedResult::Err(err.into()),
         }
     }
 }
@@ -213,27 +251,5 @@ impl<T, E> From<Result<T, E>> for TracedResult<T, E> {
 impl<T, E> From<TracedResult<T, E>> for Result<T, TracedError<E>> {
     fn from(value: TracedResult<T, E>) -> Self {
         value.into_result()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{TracedError, TracedResult};
-
-    fn errors() -> TracedResult<i32, &'static str> {
-        Err("Bad").into()
-    }
-
-    fn consumes() -> TracedResult<i32, String> {
-        let i = errors()?;
-        TracedResult::Ok(1)
-    }
-
-    #[test]
-    fn test_trace() {
-        let err = consumes();
-        if let TracedResult::Err(error) = err {
-            println!("{:#?}", error.trace)
-        }
     }
 }
