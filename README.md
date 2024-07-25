@@ -1,6 +1,6 @@
 # trace_error
 ## An proof-of-concept to automatically backtrace errors propagated with the `?` operator#
-**Note**: This crate relies on the unstable [`try_trait_v2`](https://rust-lang.github.io/rfcs/3058-try-trait-v2.html) language feature. This means it can only be used with the `nightly` toolchain, may break at any time, and is thus not recommended for use in production code.
+**Note**: This crate relies on the unstable [`try_trait_v2`](https://rust-lang.github.io/rfcs/3058-try-trait-v2.html) language feature. This means it can only be used with the `nightly` toolchain, may break at any time, and is thus not recommended for use in production code until this feature is stabilized.
 
 ## Usage 
 
@@ -43,10 +43,9 @@ fn do_something() -> TracedResult<(), Baz> {
 
 fn main() {
     if let TracedResult::Err(error) = do_something() {
-        println!("{:?}", error.trace()) 
-        // This will print the following locations:
-        // Line 2, i.e. the call to `.into()` in `foo()`
-        // Line 6, i.e. the use of the `?` operator in `do_something`.
+        println!("{}", error) 
+        // Baz at (40:21) in file example.rs
+        // at (2:26) in file example.rs
     }
 }
 
@@ -56,6 +55,7 @@ fn main() {
 `TracedResult<T, E>` currently has its the following methods:
 - `unwrap()` and all related methods, including the `unchecked` methods
 - `is_ok()` and `is_err()` 
+- `map()` and all related methods
 - conversion to an `std::result::Result<T, TracedError<E>>` using `into_result()` or the `From` trait for compatibility any remaining methods – note that subsequent uses of the `?` operator will no longer be tracked. To discard the call stack completely, you can also use `TracedResult::discard_call_stack()` to get a `Result<T, E>` without the `TracedError` wrapper around `E`.
 
 ## Note: the `#[track_caller]` attribute
